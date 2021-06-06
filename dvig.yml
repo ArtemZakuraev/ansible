@@ -1,0 +1,42 @@
+---
+- hosts: web_server
+  become: true
+  vars:
+   sys_packages: ['mysql-server', 'php-fpm', 'php-mysql', 'wordpress', 'nginx']
+  tasks:
+   - name: "Check services"
+     package_facts:
+      manager: "auto"
+   - name: php_fpm add
+     command:
+      add-apt-repository universe
+     tags: skip_ansible_lint
+   - name: create dir nginx back
+     file:
+      path: /home/test/backups/nginx
+      state: directory
+   - name: copy www back
+     command: cp -r /var/www/html /home/test/backups/nginx
+     when: "'nginx' in ansible_facts.packages"
+   - name: copy conf
+     command: cp -r /var/www/html /home/test/backups/nginx
+     when: "'nginx' in ansible_facts.packages"
+   - name: install packages
+     apt: name={{ sys_packages }}
+   - name: Сonfig
+     template:
+      src: "files/nginx.conf"
+      dest: "/etc/nginx/sites-available/10.2.8.130"
+     when: "'nginx' in ansible_facts.packages"
+   - name: start nginx
+     service: name=nginx state=started
+   - name: Creates directory
+     file:
+      path: /home/test/backups/mysql
+      state: directory
+   - name: privileges
+     command: mysql UPDATE mysql.user SET Host='*' WHERE Host='localhost' AND User='root'; && UPDATE mysql.db SET Host='*' WHERE Host='localhost' AND User='root'; && FLUSH PRIVILEGES;
+   - name: backup mysql
+     command:
+       mysqldump -h 127.0.0.1 mysql>/home/test/backups/mysql/1.sql
+     tags: skip_ansible_lint
